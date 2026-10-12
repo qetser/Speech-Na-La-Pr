@@ -1,0 +1,12 @@
+english,marathi_formal,marathi_colloquial,register,domain,avoid_codemix,notes
+Gram Panchayat,ग्रामपंचायत,गावपंचायत,administrative,governance,ग्राम पंचायत (English spacing),Standard admin spelling
+taluka,तालुका,,administrative,governance,taluka,Keep Devanagari
+district,जिल्हा,,administrative,governance,district,
+household,कुटुंब,घर,administrative,governance,household,'कुटुंब' in formal reports
+works completed,पूर्ण झालेली कामे,झालेली कामं,administrative,governance,works,
+funds received,प्राप्त निधी,आलेला पैसा,administrative,finance,funds,
+funds spent,खर्च झालेला निधी,खर्च केलेला पैसा,administrative,finance,spent,
+beneficiaries,लाभार्थी,,administrative,governance,beneficiary,
+reporting period,अहवाल कालावधी,,administrative,governance,period,
+crop yield,पीक उत्पादन,,agri-technical,agriculture,yield,For agri-advisory domain
+subsidy,अनुदान,,administrative,finance,subsidy,

@@ -1,0 +1,28 @@
+% Marathi report template. Compile with XeLaTeX (or LuaLaTeX).
+% Needs the Noto Serif Devanagari font (bundled on most Linux; on Overleaf it is
+% available). On Overleaf: set the compiler to XeLaTeX.
+\documentclass[12pt]{article}
+
+\usepackage{fontspec}
+\setmainfont{Noto Serif Devanagari}[Script=Devanagari]
+\newfontfamily\latinfont{Latin Modern Roman}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{73A89A}
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0pt}{}
+
+\title{\textbf{%%TITLE%%}}
+\date{%%DATE%%}
+\author{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+%%BODY%%
+
+\end{document}

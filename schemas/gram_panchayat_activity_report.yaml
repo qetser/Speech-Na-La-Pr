@@ -1,0 +1,48 @@
+# Template spec S for: Gram Panchayat activity report
+# Each slot declares the source fields it may use. The generator may ONLY use
+# values bound from these fields; the verifier (Component 5) checks every number
+# in the output against the bound source_cell_id. This is the ToTTo-style
+# controlled-generation contract (see plan.md, Components 1 & 5).
+
+domain: gram_panchayat_activity_report
+language: mr            # Marathi
+register: administrative_formal
+
+# Expected input columns (the source table T)
+source_fields:
+  - {name: gp_name,        type: string,  desc: "Gram Panchayat name"}
+  - {name: taluka,         type: string,  desc: "Taluka"}
+  - {name: district,       type: string,  desc: "District"}
+  - {name: period,         type: string,  desc: "Reporting period"}
+  - {name: households,     type: int,     desc: "Number of households"}
+  - {name: works_done,     type: int,     desc: "Works completed"}
+  - {name: funds_received, type: money,   desc: "Funds received (INR)"}
+  - {name: funds_spent,    type: money,   desc: "Funds spent (INR)"}
+  - {name: beneficiaries,  type: int,     desc: "Beneficiaries"}
+
+# Ordered report slots. {{field}} = a placeholder that MUST resolve to a cell.
+slots:
+  - id: header
+    intent: "Title line naming the GP, taluka, district, and period."
+    uses: [gp_name, taluka, district, period]
+
+  - id: coverage
+    intent: "One sentence on households covered in the period."
+    uses: [households, period]
+
+  - id: works
+    intent: "Works completed during the period."
+    uses: [works_done, period]
+
+  - id: finance
+    intent: "Funds received vs spent. Both figures must be traceable."
+    uses: [funds_received, funds_spent]
+
+  - id: beneficiaries
+    intent: "Beneficiaries reached."
+    uses: [beneficiaries]
+
+# Verification rules (Component 5)
+verification:
+  numeric_claims: must_bind_to_source_cell   # 0 unsupported numbers
+  on_mismatch: flag_for_human                 # alt: block | regenerate

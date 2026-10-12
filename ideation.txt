@@ -1,0 +1,143 @@
+===============================================================================
+ MARATHI GROUNDED REPORT GENERATION — IDEATION
+ Project working name: Speech-Na-La-Pr
+ Date started: 2026-10-12
+===============================================================================
+
+-------------------------------------------------------------------------------
+1. PROBLEM STATEMENT
+-------------------------------------------------------------------------------
+Marathi is the official language of Maharashtra, yet almost every structured
+reporting workflow in the state — Gram Panchayat activity reports, agricultural
+advisories, district health filings — is either handwritten or drafted in
+English and translated afterwards. This introduces:
+  - delay,
+  - inconsistent terminology, and
+  - loss of meaning exactly where it matters most: at the Marathi-first reader.
+
+Current LLMs handle this poorly for three reasons:
+  (a) Marathi is low-resource and highly inflectional; its Devanagari script
+      fragments badly under standard tokenizers, raising cost and lowering
+      output quality.
+  (b) There is no standardized lexicon for administrative and agri-technical
+      Marathi, so models drift between formal Sanskritised register,
+      colloquial speech, and code-mixed Marathi-English.
+  (c) Report generation cannot tolerate hallucination — one fabricated figure
+      in a subsidy or yield report has real consequences.
+
+-------------------------------------------------------------------------------
+2. WHAT WE ARE BUILDING
+-------------------------------------------------------------------------------
+A retrieval-grounded, structure-constrained report generation system for
+Marathi.
+
+  INPUT  : tabular / semi-structured data
+           (CSV exports, form submissions, survey data)
+  OUTPUT : template-faithful Marathi reports, in the correct register,
+           with every numeric claim traceable back to its source record.
+
+Core principle: generation is GROUNDED (no free invention) and CONSTRAINED
+(fills a fixed template), not open-ended text generation.
+
+-------------------------------------------------------------------------------
+3. KEY TECHNICAL CHALLENGES
+-------------------------------------------------------------------------------
+  C1. Tokenization & morphology for Devanagari
+      - measure token fertility of candidate tokenizers on Marathi
+      - handle inflection (case, number, gender agreement)
+
+  C2. Domain terminology bank with register control
+      - a curated lexicon for admin + agri-technical Marathi
+      - control for register (formal/administrative vs colloquial)
+      - suppress unwanted code-mixing
+
+  C3. Verification layer enforcing factual consistency
+      - every number in the output must map to a source cell
+      - reject / flag any unsupported claim before the report is emitted
+
+  C4. Evaluation beyond BLEU
+      - BLEU correlates weakly for inflectional low-resource languages
+      - need faithfulness + register + fluency metrics, human-aligned
+
+-------------------------------------------------------------------------------
+4. DELIVERABLES
+-------------------------------------------------------------------------------
+  D1. An open Marathi report-generation BENCHMARK
+      (datasets + tasks + metrics, publishable/reusable).
+  D2. A reusable domain LEXICON for administrative/agri Marathi.
+  D3. A deployable PIPELINE demonstrating that grounded generation in a
+      low-resource Indic language can match English-pipeline accuracy
+      WITHOUT translation as an intermediate step.
+
+-------------------------------------------------------------------------------
+5. SUCCESS CRITERIA
+-------------------------------------------------------------------------------
+  - Faithfulness: 0 unsupported numeric claims on held-out reports.
+  - Register: outputs judged "administratively appropriate" by native readers.
+  - Parity: grounded Marathi pipeline accuracy >= English-then-translate
+            baseline, at lower or comparable cost.
+  - Reusability: benchmark + lexicon usable by third parties.
+
+===============================================================================
+ WHAT WE HAVE TO DO  (ROADMAP)
+===============================================================================
+
+PHASE 0 — SCOPING & SETUP  (week 1)
+  [ ] Pick ONE pilot domain first (recommend: Gram Panchayat activity report
+      OR an agri advisory). Narrow = faster signal.
+  [ ] Collect 3-10 real report templates for that domain (the fixed structure).
+  [ ] Collect sample source data (CSV/forms) that feed those reports.
+  [ ] Define the exact report schema: sections, required fields, which numbers
+      come from which source columns.
+  [ ] Set up repo structure, data folder, licensing note for any data.
+
+PHASE 1 — DATA & LEXICON  (weeks 2-4)
+  [ ] Build the input->output pairs: (source table) -> (gold Marathi report).
+  [ ] Seed the domain lexicon: admin + agri terms, with register tags and
+      English/code-mix variants to avoid.
+  [ ] Define register rules (what "formal administrative Marathi" means here).
+  [ ] Document data provenance and any PII handling.
+
+PHASE 2 — TOKENIZATION & MORPHOLOGY STUDY  (weeks 3-5, overlaps P1)
+  [ ] Measure token fertility of candidate tokenizers on Marathi corpus.
+  [ ] Compare: standard LLM tokenizers vs Indic/Marathi-aware options.
+  [ ] Decide tokenization strategy; document cost/quality tradeoff.
+
+PHASE 3 — GENERATION PIPELINE (v0)  (weeks 5-7)
+  [ ] Retrieval: ground each template slot in source records.
+  [ ] Structure constraint: force template-faithful output (slot filling).
+  [ ] Register control: inject lexicon + register instructions.
+  [ ] Produce first end-to-end Marathi reports.
+
+PHASE 4 — VERIFICATION LAYER  (weeks 7-9)
+  [ ] Numeric traceability: map every output number back to a source cell.
+  [ ] Consistency checks: reject/flag unsupported claims.
+  [ ] Decide fail behavior (block, flag for human, or regenerate).
+
+PHASE 5 — EVALUATION  (weeks 9-11)
+  [ ] Define metrics beyond BLEU: faithfulness, register, fluency.
+  [ ] Build the English-then-translate BASELINE for comparison.
+  [ ] Run human evaluation with native Marathi readers.
+  [ ] Correlate automatic metrics with human judgment.
+
+PHASE 6 — PACKAGE & RELEASE  (weeks 11-12)
+  [ ] Freeze and document the benchmark (D1).
+  [ ] Publish the lexicon (D2).
+  [ ] Ship deployable pipeline + README + reproducibility notes (D3).
+  [ ] Write up results (parity vs baseline, cost).
+
+-------------------------------------------------------------------------------
+OPEN QUESTIONS TO RESOLVE EARLY
+-------------------------------------------------------------------------------
+  Q1. Which pilot domain first? (affects every downstream choice)
+  Q2. Where does real source data + real templates come from? (access/licensing)
+  Q3. Do we have native Marathi reviewers available for eval?
+  Q4. Hosted LLM API vs local/open model? (cost, privacy, tokenizer control)
+  Q5. What counts as "ground truth" for reports that today are handwritten?
+
+-------------------------------------------------------------------------------
+IMMEDIATE NEXT STEP
+-------------------------------------------------------------------------------
+  -> Answer Q1 (pick pilot domain) and gather 3-10 real templates + sample
+     source data for it. Everything else keys off that.
+===============================================================================

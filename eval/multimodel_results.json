@@ -1,0 +1,12 @@
+{
+  "gpt-4o": {
+    "B1_ungrounded": 0.588,
+    "B4_grounded": 1.0,
+    "n": 3
+  },
+  "gpt-4o-mini": {
+    "B1_ungrounded": 0.831,
+    "B4_grounded": 1.0,
+    "n": 3
+  }
+}

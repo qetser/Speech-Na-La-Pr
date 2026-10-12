@@ -1,0 +1,71 @@
+:root {
+  /* colors */
+  --page: #fbfaf9;
+  --card: #ffffff;
+  --sand: #f4efec;
+  --panel: #f6f5f3;
+  --text: #251f21;
+  --text-2: #585254;
+  --text-3: #969394;
+  --border: #eae9ea;
+  --teal: #73a89a;
+  --teal-dk: #5c9183;
+  --teal-soft: rgba(115, 168, 154, 0.16);
+  --error: #ed313e;
+  --shadow-sm: 0 1px 2px rgba(37, 31, 33, 0.04), 0 2px 8px rgba(37, 31, 33, 0.04);
+  --shadow-md: 0 8px 30px rgba(37, 31, 33, 0.08);
+
+  /* ---- typography system (matched to the reference UI) ----
+     Display  = Plus Jakarta Sans  (headings, logos, stat numbers)
+     Body/UI  = Inter              (text, labels, tabular numbers)
+     Marathi  = Noto Sans Devanagari (appended so Devanagari glyphs render)       */
+  --font-display: 'Plus Jakarta Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-body: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+
+  /* type scale (size / line-height / weight / tracking) */
+  --t-display: 700 32px/1.15 var(--font-display);
+  --t-h1: 600 24px/1.25 var(--font-display);
+  --t-h2: 600 18px/1.3 var(--font-display);
+  --t-h3: 600 15px/1.4 var(--font-display);
+  --t-body: 400 14px/1.6 var(--font-body);
+  --t-label: 600 12px/1.4 var(--font-body);
+  --t-caption: 400 12px/1.5 var(--font-body);
+  --tracking-tight: -0.02em;
+  --tracking-label: 0.04em;
+
+  /* radius */
+  --r-control: 6px;
+  --r-card: 16px;
+  --r-panel: 12px;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+/* numbers align in tables/stats */
+.tnum, .stat-val, .cmp-num, .trace td, .rc-engine { font-variant-numeric: tabular-nums; }
+
+/* shared: grounded-claim highlight + badges (used on the report) */
+.badge { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; white-space: nowrap; }
+.badge.ok { background: var(--teal-soft); color: var(--teal-dk); }
+.badge.warn { background: rgba(237, 49, 62, 0.12); color: var(--error); }
+
+.claim {
+  background: var(--teal-soft); color: var(--text);
+  border-radius: var(--r-control); padding: 1px 4px; cursor: default;
+}
+.claim sup { font-size: 0.6em; color: var(--teal-dk); margin-left: 2px; font-weight: 600; }
