@@ -7,6 +7,15 @@ English — and export a compile-ready LaTeX document.**
 An NLP project on *retrieval-grounded, structure-constrained generation* for a
 low-resource, morphologically rich language.
 
+> **Core method — SymGen.** This project applies *symbolically grounded generation*
+> (**SymGen**; Torroba Hennigen, Shen, Nrusimha, Gapp, Sontag & Kim — MIT & Good Data
+> Initiative, **COLM 2024**, [arXiv:2311.09188](https://arxiv.org/abs/2311.09188),
+> [symgen.github.io](https://symgen.github.io)) to Marathi administrative reports.
+> SymGen has the LLM emit `{{ field }}` references into the source data instead of raw
+> values, which a parser then renders — **exactly the mechanism our pipeline uses.** We
+> extend it to a low-resource language, add a hard verifier that *rejects* ungrounded
+> numbers, train a Marathi tokenizer, and test at scale. See §8.
+
 ---
 
 ## 1. Problem Statement
@@ -91,8 +100,10 @@ Five components (`pipeline/`):
 4. **Resolve** — each placeholder is substituted with its value + source id → traceable tokens.
 5. **Verify** — every number must map to a source detail; stray numbers are flagged as unsupported.
 
-This is the *controlled table-to-text* formulation (ToTTo), extended with a
-verification layer (symbolic references) and register control via a domain lexicon.
+Steps 3–4 are **SymGen's "Direct" symbolic generation** (arXiv:2311.09188): the model
+emits `{{ field }}` references and a parser renders them. Step 5 is our addition — a
+hard verifier that *rejects* any number not bound to a source field, so faithfulness is
+*enforced*, not merely made easier to check by hand.
 
 ---
 
@@ -181,6 +192,35 @@ rate**, and token cost.
 
 ## 8. How this sits in the literature — what the base papers built & found
 
+### ★ SymGen — our central paper (COLM 2024 — arXiv:2311.09188)
+*Torroba Hennigen, Shen, Nrusimha, Gapp, Sontag & Kim (MIT & Good Data Initiative).*
+
+**What they built:** *symbolically grounded generation* — instead of writing values
+directly, the LLM is prompted to interleave its text with **Jinja-like `{{ field }}`
+references** into structured data, and a parser substitutes the real values afterward.
+This gives every span a verifiable provenance. They study it across data-to-text
+(SynthBio, Rotowire), counterfactual obituaries, financial QA, and GSM8K math.
+
+**What they found (confirmed from the paper's tables):**
+- **Symbolic references are highly accurate:** reference accuracy **99.77%** (GPT-3.5-16K)
+  and **99.52%** (GPT-4-32K), versus only **35.4% / 46.1%** for a regex post-hoc baseline
+  (9,068 human annotations, 97.8% agreement).
+- **No quality loss:** rendered text is comparable in fluency/factuality to standard prompting.
+- **Easier verification (human study, 60 annotators):** annotations cut verification
+  **time ~20%** (1.98 vs 2.50 min), made it feel 14% easier; 83% preferred them.
+- **Stated limitation:** accurate references don't guarantee the *surrounding prose* is
+  correct — SymGen *aids* human verification, it does not *enforce* correctness.
+
+**How our project extends SymGen:**
+1. **Low-resource target** — Marathi / Devanagari, not English.
+2. **Enforced faithfulness** — we add a hard verifier that *rejects* any number not bound
+   to a source field, directly closing SymGen's "context may still be wrong" gap for
+   numeric claims (their human-aided check becomes our automatic gate).
+3. **A trained Marathi tokenizer** — addressing the Devanagari tokenizer tax.
+4. **Scale** — a 500-report audit (SymGen's studies use tens of examples).
+   This also follows their own suggested future work ("finetune models for templated
+   generation").
+
 ### IndicGenBench (Google Research India, 2024 — arXiv:2404.16816)
 **What they built:** the largest benchmark for evaluating LLM *generation* on Indic
 languages — **29 languages, 13 scripts, 4 families**, across five human-curated,
@@ -220,10 +260,10 @@ models underperform on Marathi, BLEU is the wrong metric, and standard tokenizer
 overcharge Devanagari. Our trained Marathi tokenizer follows the *same remediation
 trajectory* these papers describe.
 
-### Method foundations
-Controlled table-to-text (ToTTo, 2004.14373); symbolic-reference verifiable generation
-(2311.09188); plan-based retrieval grounding (2408.10490); morphology-grounded Indic
-tokenization (MorphTok, 2504.10335).
+### Other method foundations
+Controlled table-to-text (ToTTo, 2004.14373); plan-based retrieval grounding
+(2408.10490); morphology-grounded Indic tokenization (MorphTok, 2504.10335).
+(The core symbolic-reference method is SymGen, above.)
 
 ---
 

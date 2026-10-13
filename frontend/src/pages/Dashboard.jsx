@@ -400,8 +400,8 @@ const COMPONENTS = [
   ['5 · Verify', 'A checker scans the output: every number must map to a source detail. Any figure written outside the placeholder contract is flagged as unsupported.'],
 ]
 const PAPERS = [
+  ['★ SymGen: symbolically grounded generation (our core method, COLM 2024)', '2311.09188'],
   ['Controlled table-to-text (ToTTo)', '2004.14373'],
-  ['Symbolic references for verifiable generation', '2311.09188'],
   ['Plan-based retrieval grounding', '2408.10490'],
   ['Morphology-grounded Indic tokenization (MorphTok)', '2504.10335'],
   ['The tokenizer tax for Indian languages', '2607.24276'],
@@ -444,7 +444,7 @@ function MethodView() {
             the real value afterward and tag it with its source cell. A free-form LLM, by contrast, is
             free to invent plausible figures — which it does.
           </p>
-          <p className="doc-note">Grounding (step&nbsp;2) + the placeholder contract (step&nbsp;3) + verification (step&nbsp;5) together guarantee faithfulness.</p>
+          <p className="doc-note">This is <b>SymGen's</b> symbolic-reference mechanism (COLM 2024) applied to Marathi — plus our verifier, which <i>rejects</i> ungrounded numbers rather than only flagging them for a human.</p>
         </div>
         <div className="card doc-card">
           <h2>How we prove it works</h2>
