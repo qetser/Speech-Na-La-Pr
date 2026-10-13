@@ -402,10 +402,12 @@ const COMPONENTS = [
 const PAPERS = [
   ['★ SymGen: symbolically grounded generation (our core method, COLM 2024)', '2311.09188'],
   ['Controlled table-to-text (ToTTo)', '2004.14373'],
+  ['IndicNLG Benchmark: NLG tasks in 11 Indic languages (EMNLP 2022)', '2203.05437'],
+  ['IndicTrans2: MT for all 22 Indian languages (TMLR 2023)', '2305.16307'],
+  ['IndicGenBench: Indic generation benchmark (Google, 2024)', '2404.16816'],
+  ['The tokenizer tax for Indian languages', '2607.24276'],
   ['Plan-based retrieval grounding', '2408.10490'],
   ['Morphology-grounded Indic tokenization (MorphTok)', '2504.10335'],
-  ['The tokenizer tax for Indian languages', '2607.24276'],
-  ['chrF++ vs BLEU for low-resource MT', '2602.17425'],
 ]
 
 function MethodView() {

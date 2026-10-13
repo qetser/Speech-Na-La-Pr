@@ -255,10 +255,31 @@ tokenizers**, plus a mechanistic explanation and a remediability analysis.
 
 ![Base paper: Marathi tokenizer tax](figures/fig4_paper_tokenizer_tax.png)
 
-**Why this matters for us:** both papers establish the exact gaps we target — frontier
-models underperform on Marathi, BLEU is the wrong metric, and standard tokenizers
-overcharge Devanagari. Our trained Marathi tokenizer follows the *same remediation
-trajectory* these papers describe.
+### IndicNLG Benchmark (Kumar et al., EMNLP 2022 — arXiv:2203.05437)
+**What they built:** the first NLG benchmark for Indic languages — ~8M examples across
+**5 generation tasks in 11 Indic languages**: **biography generation from Wikipedia
+infoboxes (a data-to-text task), news-headline generation, sentence summarization,
+paraphrase generation, and question generation**. Datasets + models released publicly.
+
+**Why it matters for us:** biography-from-infobox is exactly our *table → text* task
+family, in Indic languages — so our Marathi report generation sits squarely in the
+space this benchmark defines, and its task design is a template for a future
+*real-data* Marathi benchmark.
+
+### IndicTrans2 (Gala et al., TMLR 2023 — arXiv:2305.16307)
+**What they built:** AI4Bharat's **first open-source NMT model for all 22 scheduled
+Indian languages**, plus the Bharat Parallel Corpus Collection (230M bitext pairs) and
+the IN22 benchmark; MIT-licensed.
+
+**Why it matters for us:** IndicTrans2 is the strongest open MT system a
+**translate-pivot baseline (B0)** would use — "write in English, then translate to
+Marathi." Our thesis is that *native grounded generation* avoids that pivot's delay and
+numeric distortion; IndicTrans2 is the concrete system we would compare against.
+
+**Why this matters for us:** these papers establish the exact gaps we target — frontier
+models underperform on Marathi, BLEU is the wrong metric, standard tokenizers overcharge
+Devanagari, Indic data-to-text is an active benchmark area, and translation is the pivot
+we aim to avoid.
 
 ### Other method foundations
 Controlled table-to-text (ToTTo, 2004.14373); plan-based retrieval grounding
