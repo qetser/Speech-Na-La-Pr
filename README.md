@@ -205,6 +205,28 @@ We generated a **500-report synthetic benchmark** (`data/benchmark_large/`) and 
 drops wherever the model invented a figure. *Right:* per-report token counts, ours vs
 GPT-4o, every point below the parity line.
 
+### Results at a glance — every statistic in one place
+
+Sources: `eval/RESULTS.md`, `eval/multimodel_results.json`, `eval/tokenizer_results.json`,
+`eval/audit.json`.
+
+| # | Experiment | Data (n) | Result |
+|---|---|---|---|
+| A | Ablation, GPT-4o | 10 reports | Faithfulness **B1 0.629 → B4 1.000** (B2 1.000); chrF++ 0.406 / 0.454 / 0.993; code-mix 0.000 for all; tokens 120.2 / 32.7 / 38.1 |
+| B | Across models | 3 reports each | GPT-4o B1 0.588 → B4 1.000; GPT-4o-mini B1 0.831 → B4 1.000 |
+| C | Tokenizer fertility, Wikipedia held-out | 60,046 words, 1,600 paragraphs | Ours **1.47** vs MuRIL 1.56, IndicBERTv2 1.60, XLM-R 2.07, o200k 2.67, char 5.94, cl100k 7.20 |
+| C′ | Tokenizer fertility, administrative held-out | 49 words, 4 paragraphs (no CI) | IndicBERTv2 **1.33**, ours 1.37, MuRIL 1.51, XLM-R 1.94, o200k 2.80, char 6.76, cl100k 7.98 |
+| D1 | Scale audit, deterministic faithfulness | 500 reports × 9 figures each | **1.000** on every report (min = max = 1.000) |
+| D2 | Scale audit, template-text tokens | 500 reports | Ours 33,558 total (62–71, mean 67.1 per report) vs GPT-4o 58,350 (108–126, mean 116.7) → 1.74× |
+| D3 | Scale audit, LLM sample | 20 runs | B1 mean **0.871** (min 0.458, max 1.000) → B4 **1.000** (min = max = 1.000) |
+
+**Per-report spread (D3):** B1 ranged from 0.458 to 1.000 across the 20 sampled runs,
+which is the probabilistic hallucination noted in §9; B4 never dropped below 1.000.
+
+**Caveats on these numbers:** n is small for A (10), B (3) and D3 (20), so treat those as
+indicative rather than precise. The 49-word admin set has no confidence interval. All
+data is synthetic (§9), and chrF++ is measured against template gold.
+
 **Metrics beyond BLEU.** BLEU correlates poorly for inflectional low-resource
 languages, so we report **faithfulness** (our headline), **chrF++**, **code-mix
 rate**, and token cost.
