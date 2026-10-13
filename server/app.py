@@ -6,10 +6,11 @@ contract that frontend/src/lib/pipeline.js already renders.
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from pipeline.pdf import render_report_pdf
 from pipeline.report import build_comparison, build_report
 from pipeline.run import run_pipeline
 
@@ -82,3 +83,24 @@ def report_compare(req: ReportRequest) -> dict:
         return build_comparison(req.subject, facts, req.report_type, req.notes, req.engine)
     except Exception as e:  # pragma: no cover
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class PdfRequest(BaseModel):
+    title: str
+    sections: list[dict] = []
+    submitted_by: str = "अहवाल सादरकर्ता\n(ग्रामसेवक)"
+    authorised_by: str = "सक्षम अधिकारी\n(सरपंच)"
+    place: str = ""
+
+
+@app.post("/api/report/pdf")
+def report_pdf(req: PdfRequest) -> Response:
+    if not req.title.strip() or not req.sections:
+        raise HTTPException(status_code=400, detail="Need a title and sections.")
+    try:
+        pdf = render_report_pdf(req.title, req.sections, req.submitted_by,
+                                req.authorised_by, req.place)
+    except Exception as e:  # pragma: no cover
+        raise HTTPException(status_code=500, detail=str(e))
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'attachment; filename="report.pdf"'})

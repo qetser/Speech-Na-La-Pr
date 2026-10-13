@@ -19,3 +19,8 @@ tokenizers>=0.19     # train the Marathi BPE tokenizer
 tiktoken>=0.7        # GPT-4o tokenizer, for the fertility comparison
 transformers>=4.40  # Indic baseline tokenizers (XLM-R, MuRIL, IndicBERTv2)
 datasets>=2.19      # fetch real Marathi Wikipedia
+
+# Official PDF export (/api/report/pdf): Devanagari-shaped single-page report
+fpdf2>=2.8           # PDF generation
+uharfbuzz>=0.56      # HarfBuzz text shaping for Devanagari
+Pillow>=10.0         # convert the Maharashtra emblem for the letterhead

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { compareReports } from '../lib/pipeline'
+import { compareReports, reportPdf } from '../lib/pipeline'
 import './Dashboard.css'
 
 const REPORT_TYPES = ['Activity report', 'Agricultural advisory', 'Financial summary',
@@ -48,11 +48,18 @@ export default function Dashboard({ onHome }) {
     } finally { setBusy(false) }
   }
 
-  function downloadTex() {
-    const blob = new Blob([result.grounded.latex], { type: 'text/x-tex' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'report.tex'; a.click()
-    URL.revokeObjectURL(url)
+  const [pdfBusy, setPdfBusy] = useState(false)
+
+  async function downloadPdf() {
+    setPdfBusy(true)
+    try {
+      const blob = await reportPdf({ title: result.grounded.title, sections: result.grounded.sections })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = 'report.pdf'; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('PDF generation failed: ' + e.message)
+    } finally { setPdfBusy(false) }
   }
 
   const title = nav === 'generate' ? 'Generate' : nav === 'results' ? 'Results' : 'Method'
@@ -115,7 +122,7 @@ export default function Dashboard({ onHome }) {
         </div>
 
         {nav === 'about' && <MethodView />}
-        {nav === 'results' && <ResultsView result={result} onDownload={downloadTex} onNew={() => setNav('generate')} />}
+        {nav === 'results' && <ResultsView result={result} onDownload={downloadPdf} pdfBusy={pdfBusy} onNew={() => setNav('generate')} />}
 
         {nav === 'generate' && (
           <>
@@ -167,7 +174,7 @@ export default function Dashboard({ onHome }) {
 }
 
 /* ================= Results view (live output + benchmark) ================= */
-function ResultsView({ result, onDownload, onNew }) {
+function ResultsView({ result, onDownload, pdfBusy, onNew }) {
   const g = result?.grounded
   const u = result?.ungrounded
   const m = result?.metrics
@@ -249,7 +256,9 @@ function ResultsView({ result, onDownload, onNew }) {
                 </div>
                 <div className="col-actions">
                   <span className="badge ok">{pct(g.verification)} faithful</span>
-                  <button className="tex" onClick={onDownload}>.tex</button>
+                  <button className="tex" onClick={onDownload} disabled={pdfBusy}>
+                    {pdfBusy ? 'Preparing…' : 'Download PDF'}
+                  </button>
                 </div>
               </div>
               <h4 className="rc-title">{g.title}</h4>

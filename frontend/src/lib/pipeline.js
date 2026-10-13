@@ -21,6 +21,20 @@ export async function generateReportDoc({ subject, reportType, facts, notes, eng
   return data
 }
 
+// Render the grounded report to an official single-page PDF (returns a Blob).
+export async function reportPdf({ title, sections, submitted_by, authorised_by, place }) {
+  const res = await fetch(`${API}/api/report/pdf`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, sections, submitted_by, authorised_by, place }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || res.statusText)
+  }
+  return await res.blob()
+}
+
 // Both results side by side: grounded (ours) + ungrounded (plain LLM).
 export async function compareReports({ subject, reportType, facts, notes, engine = 'auto' }) {
   const res = await fetch(`${API}/api/report/compare`, {
