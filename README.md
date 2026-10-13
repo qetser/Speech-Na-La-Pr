@@ -195,31 +195,38 @@ rate**, and token cost.
 ### ★ SymGen — our central paper (COLM 2024 — arXiv:2311.09188)
 *Torroba Hennigen, Shen, Nrusimha, Gapp, Sontag & Kim (MIT & Good Data Initiative).*
 
-**What they built:** *symbolically grounded generation* — instead of writing values
-directly, the LLM is prompted to interleave its text with **Jinja-like `{{ field }}`
-references** into structured data, and a parser substitutes the real values afterward.
-This gives every span a verifiable provenance. They study it across data-to-text
-(SynthBio, Rotowire), counterfactual obituaries, financial QA, and GSM8K math.
+**Method.** The LLM writes its answer in Jinja-style `{{ field }}` references into a JSON
+input; a parser swaps each reference for its value, so every span links back to a source
+field. Two modes — **Direct** (symbolic text in one pass) and **Indirect** (plain text
+first, then rewritten with references: ~2× the tokens, GPT-4 only, since GPT-3.5 was
+unreliable with it). A failed reference renders as "undefined"; an unparseable output is
+replaced by a "text not available" message.
 
-**What they found (confirmed from the paper's tables):**
-- **Symbolic references are highly accurate:** reference accuracy **99.77%** (GPT-3.5-16K)
-  and **99.52%** (GPT-4-32K), versus only **35.4% / 46.1%** for a regex post-hoc baseline
-  (9,068 human annotations, 97.8% agreement).
-- **No quality loss:** rendered text is comparable in fluency/factuality to standard prompting.
-- **Easier verification (human study, 60 annotators):** annotations cut verification
-  **time ~20%** (1.98 vs 2.50 min), made it feel 14% easier; 83% preferred them.
-- **Stated limitation:** accurate references don't guarantee the *surrounding prose* is
-  correct — SymGen *aids* human verification, it does not *enforce* correctness.
+**Setup.** Datasets: SynthBio (364), counterfactual obituaries, Rotowire basketball
+summaries (100 sampled), financial QA (32), and GSM8K / GSM-hard. Models: GPT-3.5 and
+GPT-4 (0613). Baseline: the same model answering without references (chain-of-thought and
+PAL for the maths tasks).
 
-**How our project extends SymGen:**
-1. **Low-resource target** — Marathi / Devanagari, not English.
-2. **Enforced faithfulness** — we add a hard verifier that *rejects* any number not bound
-   to a source field, directly closing SymGen's "context may still be wrong" gap for
-   numeric claims (their human-aided check becomes our automatic gate).
-3. **A trained Marathi tokenizer** — addressing the Devanagari tokenizer tax.
-4. **Scale** — a 500-report audit (SymGen's studies use tens of examples).
-   This also follows their own suggested future work ("finetune models for templated
-   generation").
+**Results (confirmed from the paper's tables).**
+- **Reference accuracy** (Rotowire): **99.77%** (GPT-3.5) / **99.52%** (GPT-4), vs a regex
+  post-hoc baseline's **35.40% / 46.10%** (9,068 human annotations, 97.8% agreement).
+- **Human study** (60 annotators): error-finding accuracy ~unchanged (80.83% vs 80.00%),
+  but verification **~20% faster** (1.98 vs 2.50 min) and perceived easier.
+- **Text quality: mixed** — BLEU improved on SynthBio with GPT-4 (36.83 vs 32.43) but
+  trailed the baseline on Rotowire; GPT-3.5 often did worse with symbols.
+- **Maths:** beat chain-of-thought on GSM-hard, lost to PAL.
+- **Stated limits:** a correct reference can still sit in a wrong sentence; results use
+  closed models; samples are small.
+
+**How our project compares.** SymGen never measured the quantity we do — the **rate of
+unsupported numbers in free generation** (our 0.629 → 1.000). It has no Indian-language
+work, no tokenizer study, and **no automatic verifier**: its measure of success is human
+checking *speed*, whereas ours is *enforced* faithfulness. Two of its findings reinforce
+our framing: SymGen's **text quality sometimes dropped** (so a surface metric like chrF
+alone isn't enough — faithfulness is the right headline), and it found **GPT-3.5 less
+reliable with symbols** (which our two-model B1→B4 test echoes). Concretely we extend it
+by: (1) a low-resource target (Marathi/Devanagari); (2) a hard verifier that *rejects*
+ungrounded numbers; (3) a trained Marathi tokenizer; (4) a 500-report scale audit.
 
 ### IndicGenBench (Google Research India, 2024 — arXiv:2404.16816)
 **What they built:** the largest benchmark for evaluating LLM *generation* on Indic
@@ -280,6 +287,16 @@ numeric distortion; IndicTrans2 is the concrete system we would compare against.
 models underperform on Marathi, BLEU is the wrong metric, standard tokenizers overcharge
 Devanagari, Indic data-to-text is an active benchmark area, and translation is the pivot
 we aim to avoid.
+
+### Closely related work (faithfulness & low-resource data-to-text)
+The nearest neighbours to our setting, for a related-work comparison:
+- **Faithful Low-Resource Data-to-Text Generation through Cycle Training** (Wang et al.,
+  ACL 2023 — arXiv:2305.14793) — the closest work on *faithfulness* in low-resource
+  data-to-text; improves faithfulness via cycle training rather than symbolic references.
+- **Guided Beam Search to Improve Generalization in Low-Resource Data-to-Text Generation**
+  (INLG 2023) — another low-resource data-to-text approach, via constrained decoding.
+- **Survey of Hallucination in Natural Language Generation** (Ji et al., ACM Computing
+  Surveys 2023 — arXiv:2202.03629) — background on hallucination types and mitigations.
 
 ### Other method foundations
 Controlled table-to-text (ToTTo, 2004.14373); plan-based retrieval grounding
