@@ -1,6 +1,10 @@
-"""Finalize: train the tokenizer on combined diverse+large corpus, recompute the
-per-report token audit over all 500 reports, and merge with the existing LLM
-faithfulness sample. Writes eval/audit.json."""
+"""Finalize: recompute the per-report token audit over all 500 reports with the
+existing (Wikipedia-trained) tokenizer, and merge with the existing LLM faithfulness
+sample. Writes eval/audit.json. Does NOT retrain the tokenizer
+(use `python -m pipeline.train_tokenizer`).
+
+CAVEAT: the 500 reports are template-generated, so token counts here are an
+in-template cost figure, not evidence of general Marathi efficiency."""
 import json
 import sys
 from pathlib import Path
@@ -18,15 +22,11 @@ from pipeline.schema import load_schema
 from pipeline.verify import verify
 
 schema = load_schema(DEFAULT_SCHEMA)
-diverse = ROOT / "data/corpus/marathi_admin.txt"
-large = ROOT / "data/corpus/marathi_admin_large.txt"
 REPORTS = ROOT / "data/benchmark_large/reports.csv"
 HEADER = "gp_name,taluka,district,period,households,works_done,funds_received,funds_spent,beneficiaries"
 
-print("training tokenizer on combined corpus (diverse + large)...")
-TT.train(corpus=[diverse, large], vocab_size=3000)
 fertility = TT.evaluate()
-print("held-out fertility:", fertility)
+print("held-out fertility:", {k: {n: v[0] for n, v in e["fertility"].items()} for k, e in fertility.items()})
 
 import tiktoken
 from tokenizers import Tokenizer

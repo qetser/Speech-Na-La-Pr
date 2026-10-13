@@ -1,6 +1,6 @@
 """Actual testing at scale + audit data for the figure.
 
-1. Retrain the Marathi tokenizer on the large corpus; measure fertility.
+1. Measure fertility with the existing Wikipedia-trained tokenizer.
 2. Over ALL 500 reports (deterministic, offline): verify faithfulness and measure
    tokens-per-report for our tokenizer vs GPT-4o's.
 3. Over a sample: run B1 (ungrounded LLM) vs B4 (grounded LLM) faithfulness.
@@ -31,11 +31,8 @@ CORPUS = ROOT / "data" / "corpus" / "marathi_admin_large.txt"
 REPORTS = ROOT / "data" / "benchmark_large" / "reports.csv"
 HEADER = "gp_name,taluka,district,period,households,works_done,funds_received,funds_spent,beneficiaries"
 
-# --- 1. retrain tokenizer on the big corpus ---
-print("retraining tokenizer on large corpus...")
-TT.train(corpus=CORPUS, vocab_size=4000)
-fertility = {k: v for k, v in TT.evaluate().items()}
-print("fertility:", fertility)
+# --- 1. fertility with the existing Wikipedia-trained tokenizer (no retraining) ---
+fertility = TT.evaluate()
 
 import tiktoken
 from tokenizers import Tokenizer

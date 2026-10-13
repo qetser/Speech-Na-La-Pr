@@ -25,7 +25,7 @@ export default function Landing({ onStart }) {
           <ul className="lp-points">
             <li><b>100%</b> figures traceable to source</li>
             <li><b>Native Marathi</b>, no English translation step</li>
-            <li><b>1.3×</b> fewer tokens than GPT-4o's tokenizer</li>
+            <li><b>1.8×</b> fewer tokens than GPT-4o's tokenizer (measured; Wikipedia held-out)</li>
           </ul>
         </div>
 
@@ -47,10 +47,10 @@ export default function Landing({ onStart }) {
 
           <div className="sc-card sc-metric">
             <div className="sc-metric-label">Tokenizer efficiency</div>
-            <div className="sc-metric-val">1.31×</div>
+            <div className="sc-metric-val">1.81×</div>
             <div className="sc-bars">
-              <div className="sc-bar"><span style={{ width: '100%' }} /> <em>GPT-4o 199</em></div>
-              <div className="sc-bar ours"><span style={{ width: '76%' }} /> <em>Ours 152</em></div>
+              <div className="sc-bar"><span style={{ width: '100%' }} /> <em>GPT-4o 2.67 tok/word</em></div>
+              <div className="sc-bar ours"><span style={{ width: '55%' }} /> <em>Ours 1.47</em></div>
             </div>
           </div>
 

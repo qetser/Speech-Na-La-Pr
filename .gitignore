@@ -13,3 +13,6 @@ frontend/dist/
 
 # OS
 .DS_Store
+
+# Real corpus (re-fetch with scripts/fetch_marathi_wiki.py); keep the small held-out file
+data/corpus/real/train_wiki.txt

@@ -22,36 +22,38 @@ Generator for B1/B4: OpenAI `gpt-4o`. Run via `python -m eval.run_eval`.
 - **It is also cheaper.** B4 is more concise than B1 (32.7 vs 120.2 tokens): grounding
   focuses the model instead of letting it pad.
 
-## Tokenizer study (Component 2 — a trained component)
+## Tokenizer study (Component 2 — a measurement; not used in generation)
 
-We trained a Marathi-specialized BPE tokenizer (`pipeline/train_tokenizer.py`,
-vocab 2000) on a domain corpus and measured subword **fertility** (tokens per
-word, lower = cheaper) on held-out Marathi:
+BPE (vocab 32,000, all filled) trained on 10.2M words of real Marathi Wikipedia
+(`pipeline/train_tokenizer.py`); evaluated on 60,046 words from held-out *articles*
+(general Marathi). Full numbers: `eval/tokenizer_results.json`.
 
-| Tokenizer | Fertility (tokens/word) |
+| Tokenizer | Fertility (tokens/word), 95% CI |
 |---|---|
-| char baseline | 6.76 |
-| GPT-4o (`o200k_base`) | 2.80 |
-| **Marathi-BPE (ours, trained)** | **2.14** |
+| char baseline | 5.94 |
+| GPT-3.5/4 (cl100k) | 7.20 [7.16, 7.23] |
+| GPT-4o (o200k) | 2.67 [2.65, 2.68] |
+| XLM-R | 2.07 [2.05, 2.08] |
+| MuRIL | 1.56 [1.55, 1.57] |
+| IndicBERTv2 | 1.60 [1.59, 1.61] |
+| **Marathi-BPE (ours)** | **1.47 [1.46, 1.48]** |
 
-**Finding:** our trained tokenizer needs **1.30x fewer tokens per word** than
-GPT-4o's English-centric tokenizer — i.e. a direct generation-cost saving on
-Marathi, the "tokenizer tax" made concrete.
+**Finding:** GPT tokenizers pay a large Marathi tax (o200k ≈ 1.8× ours; cl100k worse than
+characters). Against Indic-aware tokenizers ours is only ~6% lower — near a tie, and ours
+shares its genre (Wikipedia) with the test set. The tokenizer does **not** affect
+generation cost: GPT-4o generates with its own tokenizer.
 
-*Caveats (honest):* the training corpus is ~1.6k words of synthetic domain text,
-and our tokenizer is domain-specialized while GPT's is general-purpose. A larger
-real Marathi corpus would widen the gap; this is a proof-of-concept of the effect,
-not a production tokenizer.
+*Superseded:* the earlier 1.6k-word template-corpus result (2.18 vs 2.80 on 49 words)
+was too small and too close to its training text to support a claim.
 
 ## Scale audit — 500-report synthetic benchmark
 
-Generated `data/benchmark_large/reports.csv` (500 rows) + a 3,000-line Marathi corpus;
-re-trained the tokenizer on diverse+large text (vocab 3000). Results:
+Generated `data/benchmark_large/reports.csv` (500 template rows). Results:
 
 - **Deterministic faithfulness over all 500 reports: 1.000** (zero unsupported figures).
-- **In-domain token cost:** ours 29,983 vs GPT-4o 58,350 tokens → **1.95× saving**.
+- **Template-text token cost:** ours 33,558 vs GPT-4o 58,350 tokens (1.74×) — indicative
+  only, since all reports share one template.
 - **Ungrounded vs grounded (sample of 20 LLM runs):** B1 **0.871** → B4 **1.000**.
-- Held-out fertility (tokens/word): char 6.76, cl100k 7.98, o200k 2.80, **ours 2.18**.
 
 See `figures/fig6_scale_audit.png` (generated from `eval/audit.json`).
 
@@ -67,18 +69,9 @@ B1 (ungrounded) vs B4 (grounded, ours), faithfulness over 3 reports each:
 Ungrounded hallucination varies by model; grounding + verification reaches 1.000 on
 every model tested. The method does not depend on a particular LLM.
 
-## Tokenizer fertility across tokenizers (tokens/word, held-out Marathi)
+## Tokenizer fertility
 
-| Tokenizer | Fertility | vs ours |
-|---|---|---|
-| char baseline | 6.76 | 3.2× |
-| GPT-3.5/4 (cl100k_base) | 7.98 | 3.7× |
-| GPT-4o (o200k_base) | 2.80 | 1.3× |
-| **Marathi-BPE (ours)** | **2.14** | 1.0× |
-
-GPT-3.5/4's cl100k tokenizer is *worse than character-level* on Marathi. This matches
-the Tokenizer Tax paper (2607.24276), which reports a 5.84× Marathi fertility tax for
-cl100k, cut to 2.11× for o200k.
+See the Tokenizer study section above (held-out Wikipedia, with Indic baselines).
 
 ## What the base papers report (for positioning)
 

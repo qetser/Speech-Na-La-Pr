@@ -8,10 +8,14 @@ uvicorn[standard]>=0.29
 # LLM generation (Component 4, engine="llm"). Offline mode needs none of these.
 openai>=1.40
 
+matplotlib>=3.7   # figures
+numpy
+
 # Evaluation (optional — eval/metrics.py has a pure-python chrF fallback)
 sacrebleu>=2.4
 
 # Tokenizer training + fertility study (Component 2)
 tokenizers>=0.19     # train the Marathi BPE tokenizer
 tiktoken>=0.7        # GPT-4o tokenizer, for the fertility comparison
-# transformers>=4.40 # optional: compare MuRIL / IndicBERT too
+transformers>=4.40  # Indic baseline tokenizers (XLM-R, MuRIL, IndicBERTv2)
+datasets>=2.19      # fetch real Marathi Wikipedia

@@ -1,30 +1,48 @@
-"""Component 2 (training): train a Marathi-specialized BPE tokenizer and compare
-its subword fertility against GPT's tokenizer.
+"""Component 2: train a Marathi BPE tokenizer on REAL Marathi (Wikipedia) and
+compare its subword fertility against general-purpose and Indic-aware tokenizers.
 
 Fertility = tokens per word (lower is better: cheaper + usually better quality).
-A tokenizer trained on Marathi should segment Devanagari far more efficiently
-than an English-centric tokenizer (the "tokenizer tax", plan.md 2607.24276).
 
-    python -m pipeline.train_tokenizer                 # train + evaluate
-    python -m pipeline.train_tokenizer --vocab 1500
+    python -m scripts.fetch_marathi_wiki        # once: real corpus + article-level split
+    python -m pipeline.train_tokenizer          # train + evaluate
+    python -m pipeline.train_tokenizer --vocab 32000
+
+Evaluation sets (see `evaluate`):
+  * heldout_wiki  — ~60k words from Wikipedia ARTICLES never seen in training
+                    (general Marathi, not administrative). Headline number.
+  * admin_heldout — 49 words of administrative Marathi. Far too small for a
+                    claim; kept only as an indication.
+Baselines: char, GPT-3.5/4 (cl100k), GPT-4o (o200k), and the Indic-aware
+tokenizers XLM-R, MuRIL, IndicBERTv2. 95% CIs are bootstrapped over paragraphs.
+NOTE: this tokenizer is NOT used by the generation pipeline (GPT-4o generates with
+its own tokenizer); it only measures what a Marathi-native tokenizer would cost.
 """
 from __future__ import annotations
 
 import argparse
+import random
 import re
 from pathlib import Path
 
 from tokenizers import Tokenizer, models, normalizers, pre_tokenizers, trainers
 
 ROOT = Path(__file__).resolve().parent.parent
-CORPUS = ROOT / "data" / "corpus" / "marathi_admin.txt"
-HELDOUT = ROOT / "data" / "corpus" / "eval_heldout.txt"
+REAL = ROOT / "data" / "corpus" / "real"
+CORPUS = REAL / "train_wiki.txt"
+HELDOUT = REAL / "heldout_wiki.txt"
+ADMIN_HELDOUT = ROOT / "data" / "corpus" / "eval_heldout.txt"
 OUT = ROOT / "tokenizers" / "marathi_bpe.json"
+
+HF_BASELINES = {
+    "XLM-R": "xlm-roberta-base",
+    "MuRIL": "google/muril-base-cased",
+    "IndicBERTv2": "ai4bharat/IndicBERTv2-MLM-only",
+}
 
 _WORD = re.compile(r"\S+")
 
 
-def train(corpus: Path = CORPUS, vocab_size: int = 2000, out: Path = OUT) -> Path:
+def train(corpus: Path = CORPUS, vocab_size: int = 32000, out: Path = OUT) -> Path:
     tok = Tokenizer(models.BPE(unk_token="<unk>"))
     tok.normalizer = normalizers.NFC()                     # canonical Devanagari
     tok.pre_tokenizer = pre_tokenizers.Whitespace()
@@ -43,56 +61,100 @@ def _word_count(text: str) -> int:
     return len(_WORD.findall(text))
 
 
-def fertility_our(text: str, model_path: Path = OUT) -> float:
-    tok = Tokenizer.from_file(str(model_path))
-    n = len(tok.encode(text).tokens)
-    return n / (_word_count(text) or 1)
-
-
-def fertility_tiktoken(text: str, encoding: str = "o200k_base") -> float | None:
+def _tokenizers() -> dict:
+    """name -> callable(text) -> n_tokens. Unavailable baselines are skipped."""
+    fns = {"char baseline": lambda t: len(re.sub(r"\s+", "", t))}
     try:
         import tiktoken
-        enc = tiktoken.get_encoding(encoding)           # GPT-4o tokenizer
-        return len(enc.encode(text)) / (_word_count(text) or 1)
-    except Exception:
-        return None
+        for name, enc in (("GPT-3.5/4 (cl100k)", "cl100k_base"), ("GPT-4o (o200k)", "o200k_base")):
+            e = tiktoken.get_encoding(enc)
+            fns[name] = lambda t, e=e: len(e.encode(t))
+    except Exception as exc:
+        print(f"[skip tiktoken: {exc}]")
+    try:
+        from transformers import AutoTokenizer
+        for name, hub in HF_BASELINES.items():
+            try:
+                t = AutoTokenizer.from_pretrained(hub)
+                fns[name] = lambda x, t=t: len(t.encode(x, add_special_tokens=False))
+            except Exception as exc:
+                print(f"[skip {name}: {type(exc).__name__}]")
+    except ImportError:
+        print("[skip HF baselines: transformers not installed]")
+    ours = Tokenizer.from_file(str(OUT))
+    fns["Marathi-BPE (ours)"] = lambda t: len(ours.encode(t).tokens)
+    return fns
 
 
-def fertility_char(text: str) -> float:
-    return len(re.sub(r"\s+", "", text)) / (_word_count(text) or 1)
+def _fert(fn, paras: list[str]) -> float:
+    return sum(fn(p) for p in paras) / (sum(_word_count(p) for p in paras) or 1)
 
 
-def evaluate(heldout: Path = HELDOUT) -> dict[str, float | None]:
-    """Fertility (tokens/word) across tokenizers, mirroring the 'Tokenizer Tax'
-    study (2607.24276): GPT-3.5/4 use cl100k_base, GPT-4o uses o200k_base."""
-    text = heldout.read_text(encoding="utf-8")
-    return {
-        "char baseline": round(fertility_char(text), 3),
-        "GPT-3.5/4 (cl100k_base)": round(v, 3) if (v := fertility_tiktoken(text, "cl100k_base")) else None,
-        "GPT-4o (o200k_base)": round(v, 3) if (v := fertility_tiktoken(text, "o200k_base")) else None,
-        "Marathi-BPE (ours)": round(fertility_our(text), 3),
-    }
+def _bootstrap_ci(fn, paras: list[str], n: int = 200, seed: int = 0) -> tuple[float, float]:
+    """95% CI of corpus fertility, resampling paragraphs (per-paragraph counts cached)."""
+    rng = random.Random(seed)
+    toks = [fn(p) for p in paras]
+    words = [_word_count(p) for p in paras]
+    idx = range(len(paras))
+    stats = []
+    for _ in range(n):
+        s = [rng.choice(idx) for _ in idx]
+        stats.append(sum(toks[i] for i in s) / (sum(words[i] for i in s) or 1))
+    stats.sort()
+    return stats[int(0.025 * n)], stats[int(0.975 * n) - 1]
+
+
+def evaluate(heldout: Path = HELDOUT, admin: Path = ADMIN_HELDOUT, ci: bool = True) -> dict:
+    """{set_name: {"words": int, "fertility": {tokenizer: (mean, lo, hi)}}}."""
+    sets = {"heldout_wiki": heldout, "admin_heldout": admin}
+    fns = _tokenizers()
+    res: dict = {}
+    for sname, path in sets.items():
+        if not path.exists():
+            continue
+        paras = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        entry = {"words": sum(_word_count(p) for p in paras), "paragraphs": len(paras), "fertility": {}}
+        for name, fn in fns.items():
+            m = _fert(fn, paras)
+            lo, hi = _bootstrap_ci(fn, paras) if ci and len(paras) >= 20 else (None, None)
+            entry["fertility"][name] = (round(m, 3), lo and round(lo, 3), hi and round(hi, 3))
+        res[sname] = entry
+    return res
+
+
+def unk_rate(path: Path = HELDOUT) -> float:
+    tok = Tokenizer.from_file(str(OUT))
+    toks = [t for l in path.read_text(encoding="utf-8").splitlines() if l.strip()
+            for t in tok.encode(l).tokens]
+    return sum(t == "<unk>" for t in toks) / (len(toks) or 1)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vocab", type=int, default=2000)
+    ap.add_argument("--vocab", type=int, default=32000)
+    ap.add_argument("--skip-train", action="store_true")
     args = ap.parse_args(argv)
 
-    print(f"training Marathi BPE (vocab={args.vocab}) on {CORPUS.name} "
-          f"({_word_count(CORPUS.read_text(encoding='utf-8'))} words)…")
-    train(vocab_size=args.vocab)
-    print(f"saved -> {OUT.relative_to(ROOT)}\n")
+    if not CORPUS.exists():
+        raise SystemExit("missing real corpus - run: python -m scripts.fetch_marathi_wiki")
+    if not args.skip_train:
+        print(f"training Marathi BPE (vocab={args.vocab}) on {CORPUS.name} "
+              f"({_word_count(CORPUS.read_text(encoding='utf-8')):,} words)...")
+        train(vocab_size=args.vocab)
+        print(f"saved -> {OUT.relative_to(ROOT)}  (vocab entries: "
+              f"{Tokenizer.from_file(str(OUT)).get_vocab_size()})")
 
-    print(f"fertility on held-out Marathi ({_word_count(HELDOUT.read_text(encoding='utf-8'))} words)")
-    print(f"{'tokenizer':<26}{'tokens/word':>14}")
-    print("-" * 40)
     res = evaluate()
-    for name, f in res.items():
-        print(f"{name:<26}{(f if f is not None else 'n/a'):>14}")
-    gpt, ours = res["GPT-4o (o200k_base)"], res["marathi-bpe (ours)"]
-    if gpt and ours:
-        print(f"\nOur tokenizer uses {gpt / ours:.2f}x FEWER tokens per word than GPT-4o's.")
+    for sname, e in res.items():
+        print(f"\n{sname}: {e['words']:,} words, {e['paragraphs']} paragraphs")
+        print(f"{'tokenizer':<24}{'tokens/word':>12}   95% CI")
+        print("-" * 52)
+        for name, (m, lo, hi) in e["fertility"].items():
+            print(f"{name:<24}{m:>12}   " + (f"[{lo}, {hi}]" if lo else "(too small for a CI)"))
+    import json
+    (ROOT / "eval" / "tokenizer_results.json").write_text(
+        json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"\nour <unk> rate on held-out wiki: {unk_rate():.4%}")
     return 0
 
 

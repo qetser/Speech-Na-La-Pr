@@ -107,34 +107,53 @@ hard verifier that *rejects* any number not bound to a source field, so faithful
 
 ---
 
-## 6. The tokenizer — why, how we trained it, and results
+## 6. The tokenizer — a measurement, not a pipeline component
 
-**Why.** Standard LLM tokenizers over-fragment Devanagari, which raises cost and can
-hurt quality. We wanted to *measure* this and show a specialized tokenizer helps.
+**Why.** Standard LLM tokenizers over-fragment Devanagari, which raises cost. We
+wanted to *measure* this with a tokenizer trained on real Marathi, against fair
+Indic-aware baselines.
 
-**How we built it** (note: a tokenizer is **trained from scratch**, not fine-tuned):
-- Algorithm: **Byte-Pair Encoding (BPE)** via the HuggingFace `tokenizers` library.
-- Normalization: **NFC** (canonical Devanagari); pre-tokenization on whitespace.
-- Vocabulary: **2,000**; `min_frequency = 2`.
-- Training corpus: ~**1,650 words** of administrative/agri Marathi.
-- Evaluated on a **held-out** Marathi set (kept out of training) using **fertility**
-  = tokens per word (lower is better).
+**Scope — read this first.** This tokenizer is **not used in generation**: GPT-4o
+writes the reports with its own tokenizer. Ours only *measures* what a Marathi-native
+tokenizer would cost, so it does **not** change the pipeline's generation cost.
 
-Command: `python -m pipeline.train_tokenizer`
+**How we built it** (trained from scratch, not fine-tuned):
+- **BPE** via HuggingFace `tokenizers`, NFC normalisation, whitespace pre-tokenization,
+  **32,000** vocabulary entries (all filled), `min_frequency = 2`.
+- **Training data: real Marathi Wikipedia** (`wikimedia/wikipedia` 20231101.mr),
+  **10.2M words**. Fetched with `python -m scripts.fetch_marathi_wiki`.
+- **Held-out set: 60,046 words from 1,600 paragraphs of articles never seen in
+  training** (split by article hash, so no leakage). General Marathi, not
+  administrative. Metric: **fertility** = tokens/word, with 95% bootstrap CIs.
 
-**Results — fertility (tokens/word) on held-out Marathi:**
+Commands: `python -m scripts.fetch_marathi_wiki && python -m pipeline.train_tokenizer`
 
-| Tokenizer | Fertility | vs ours |
+**Results — fertility (tokens/word), held-out Marathi Wikipedia:**
+
+| Tokenizer | Vocab | Fertility (95% CI) |
 |---|---|---|
-| char baseline | 6.76 | 3.1× |
-| GPT-3.5 / GPT-4 (`cl100k_base`) | **7.98** | 3.7× |
-| GPT-4o (`o200k_base`) | 2.80 | 1.3× |
-| **Marathi-BPE (ours, trained)** | **2.18** | 1.0× |
+| char baseline | – | 5.94 |
+| GPT-3.5 / GPT-4 (`cl100k_base`) | 100k | 7.20 [7.16, 7.23] |
+| GPT-4o (`o200k_base`) | 200k | 2.67 [2.65, 2.68] |
+| XLM-R | 250k | 2.07 [2.05, 2.08] |
+| MuRIL | 197k | 1.56 [1.55, 1.57] |
+| IndicBERTv2 | 250k | 1.60 [1.59, 1.61] |
+| **Marathi-BPE (ours)** | 32k | **1.47 [1.46, 1.48]** |
 
-GPT-3.5/4's tokenizer is *worse than character-level* on Marathi. Our tokenizer is
-**3.7× more efficient than GPT-3.5/4** and **1.3× more than GPT-4o**.
+What this supports: general-purpose GPT tokenizers pay a large Marathi tax (cl100k is
+worse than character-level; o200k is ~1.8× ours). What it does **not** support: a
+meaningful win over Indic-aware tokenizers — ours is only ~6% below MuRIL/IndicBERTv2,
+and ours is trained and tested on the *same genre* (Wikipedia), while theirs are
+trained on broader text. Treat the ranking among the last three rows as roughly a tie.
+On the 49-word administrative held-out set (too small for a CI) IndicBERTv2 (1.33)
+and ours (1.37) are indistinguishable.
 
 ![Tokenizer fertility on Marathi](figures/fig3_tokenizer_fertility.png)
+
+*History:* an earlier version of this section trained on ~1.6k words of template-generated
+administrative text (vocab 2,000, only 1,532 entries filled) and reported 2.18 vs GPT-4o's
+2.80 on 49 words. That was noise plus in-template memorisation and has been replaced.
+The old model is kept as `tokenizers/marathi_bpe_admin_toy.json` for reference only.
 
 ---
 
@@ -173,13 +192,15 @@ We generated a **500-report synthetic benchmark** (`data/benchmark_large/`) and 
 
 - **Faithfulness over all 500 reports: 1.000** (zero unsupported figures) — the
   verifier holds at scale, not just on cherry-picked examples.
-- **Token cost:** our tokenizer encodes the 500 reports in **29,983 tokens vs GPT-4o's
-  58,350 — a 1.95× saving** on real in-domain text.
+- **Token cost (template text, indicative only):** the Wikipedia-trained tokenizer
+  encodes the 500 template-generated reports in 33,558 tokens vs GPT-4o's 58,350
+  (1.74×). Because the reports come from one template this is an in-template figure,
+  not evidence of general efficiency, and generation still uses GPT-4o's tokenizer.
 - **Ungrounded vs grounded (sample of 20 LLM runs):** B1 **0.871** → B4 **1.000**.
 
 ![Scale audit over 500 reports](figures/fig6_scale_audit.png)
 
-*Left:* our tokenizer encodes every report in roughly half the tokens of GPT-4o's.
+*Left:* token counts for the template reports, ours vs GPT-4o's.
 *Middle:* a faithfulness audit — grounded (B4) sits flat at 1.0 while ungrounded (B1)
 drops wherever the model invented a figure. *Right:* per-report token counts, ours vs
 GPT-4o, every point below the parity line.
@@ -312,9 +333,11 @@ Stated up front, because they matter:
 - **The benchmark is synthetic.** The reports, gold answers, tokenizer corpus, and
   held-out set were generated by us, not drawn from real Gram Panchayat records.
   The *measurements* are real; the *data under them* is not yet real.
-- **Our tokenizer is domain-specialized.** It was trained and tested on similar
-  administrative Marathi, so its fertility edge is partly an in-domain advantage;
-  it is a proof-of-concept of the effect, not a production tokenizer.
+- **The tokenizer is a measurement, not part of generation.** GPT-4o generates with
+  its own tokenizer, so our tokenizer does not reduce generation cost. It is trained
+  on Wikipedia and evaluated on held-out Wikipedia (same genre), and only marginally
+  beats MuRIL / IndicBERTv2 (§6). Its advantage over GPT tokenizers is real; over
+  Indic-aware ones it is within a few percent.
 - **chrF here is measured against template-style gold**, so it understates the LLM's
   fluency. Faithfulness is the defensible headline metric; a fair fluency number
   needs human raters.
@@ -322,7 +345,7 @@ Stated up front, because they matter:
   not a guarantee on any single run.
 
 **Next steps:** real Gram Panchayat data, native-Marathi human evaluation, a
-translate-pivot (B0) baseline, and a larger tokenizer corpus.
+translate-pivot (B0) baseline, and evaluating the tokenizer on non-Wikipedia Marathi (news, IndicCorp, administrative text).
 
 ---
 
@@ -330,14 +353,15 @@ translate-pivot (B0) baseline, and a larger tokenizer corpus.
 
 ```bash
 # Backend + pipeline
-uv venv -p 3.14 .venv            # or: python3 -m venv .venv
+python3.11 -m venv .venv         # or: uv venv -p 3.11 .venv
 uv pip install --python .venv/bin/python -r requirements.txt
 cp .env.example .env             # add your OPENAI_API_KEY
 
 # CLI — one report (offline deterministic engine works without a key)
 .venv/bin/python -m pipeline.cli data/sample/gram_panchayat_sample.csv
 
-# Train the Marathi tokenizer + fertility comparison
+# Real Marathi corpus (article-level split) + tokenizer training + fertility comparison
+.venv/bin/python -m scripts.fetch_marathi_wiki
 .venv/bin/python -m pipeline.train_tokenizer
 
 # Evaluation — the B1 / B2 / B4 results table
@@ -363,7 +387,7 @@ and literature). **About the method** explains the full approach. The generated
 ## 11. Repo layout
 ```
 pipeline/   the NLP system: parse, ground, generate, resolve, verify, report
-            + train_tokenizer.py (trains the Marathi BPE tokenizer)
+            + train_tokenizer.py (trains + benchmarks the Marathi BPE tokenizer on real Wikipedia)
 server/     FastAPI backend (/api/report, /api/report/compare, /api/generate)
 eval/       metrics + B1/B2/B4 harness + RESULTS.md + multimodel_results.json
 frontend/   React (Vite) app — the two-screen demo

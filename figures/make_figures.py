@@ -55,16 +55,21 @@ def fig_ablation():
     fig.tight_layout(); fig.savefig(OUT / "fig2_ablation.png", bbox_inches="tight")
 
 
-# Fig 3 — tokenizer fertility (our Experiment C)
+# Fig 3 — tokenizer fertility, read from eval/tokenizer_results.json
 def fig_fertility():
-    toks = ["char\nbaseline", "GPT-3.5/4\n(cl100k)", "GPT-4o\n(o200k)", "Marathi-BPE\n(ours)"]
-    vals = [6.76, 7.98, 2.80, 2.18]
-    cols = [GREY, RED, GREY, TEAL]
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
-    bars = ax.bar(toks, vals, color=cols, width=.62)
+    import json
+    res = json.loads((OUT.parent / "eval" / "tokenizer_results.json").read_text(encoding="utf-8"))
+    e = res["heldout_wiki"]["fertility"]
+    names = list(e)
+    vals = [e[n][0] for n in names]
+    err = [[e[n][0] - e[n][1] for n in names], [e[n][2] - e[n][0] for n in names]]
+    cols = [TEAL if "ours" in n else (RED if "cl100k" in n else GREY) for n in names]
+    fig, ax = plt.subplots(figsize=(8.4, 3.8))
+    bars = ax.bar([n.replace(" (", "\n(") for n in names], vals, color=cols, width=.62, yerr=err, capsize=3)
     bar_labels(ax, bars, "{:.2f}")
     ax.set_ylabel("Fertility (tokens / word)")
-    ax.set_title("Our tokenizer encodes Marathi in fewer tokens", fontweight="bold", fontsize=12)
+    ax.set_title(f"Held-out Marathi Wikipedia ({res['heldout_wiki']['words']:,} words, 95% CI)",
+                 fontweight="bold", fontsize=11)
     fig.tight_layout(); fig.savefig(OUT / "fig3_tokenizer_fertility.png", bbox_inches="tight")
 
 
